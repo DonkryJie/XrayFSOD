@@ -1,0 +1,67 @@
+# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
+import torch
+import torch.nn.functional as F
+from torch import nn
+
+from MSCSFNetV3_EMA import Network as mscsf
+
+class FPN(nn.Module):
+    """
+    Module that adds FPN on top of a list of feature maps.
+    The feature maps are currently supposed to be in increasing depth order, and must be consecutive.
+    """
+    def __init__(self, in_channels_list, out_channels, conv_block, top_blocks=None):
+        """
+        Arguments:
+            in_channels_list (list[int]): number of channels for each feature map that will be fed.
+            out_channels (int): number of channels of the FPN representation
+            top_blocks (nn.Module or None): if provided, an extra operation will
+                be performed on the output of the last (smallest resolution)
+                FPN output, and the result will extend the result list
+        """
+        super(FPN, self).__init__()
+
+        self.mscsf = mscsf()
+
+        self.top_blocks = top_blocks
+
+    def forward(self, x):
+
+        R_1, R_2, R_3, R_4, mask_2, egde1 = self.mscsf(x)
+
+        results = []
+        results.append(R_1)
+        results.append(R_2)
+        results.append(R_3)
+        results.append(R_4)
+
+        if isinstance(self.top_blocks, LastLevelP6P7):
+            last_results = self.top_blocks(x[-1], results[-1])
+            results.extend(last_results)
+        elif isinstance(self.top_blocks, LastLevelMaxPool):
+            last_results = self.top_blocks(results[-1])
+            results.extend(last_results)
+        return tuple(results), mask_2, egde1
+
+class LastLevelMaxPool(nn.Module):
+    def forward(self, x):
+        return [F.max_pool2d(x, 1, 2, 0)]
+
+class LastLevelP6P7(nn.Module):
+    """
+    This module is used in RetinaNet to generate extra layers, P6 and P7.
+    """
+    def __init__(self, in_channels, out_channels):
+        super(LastLevelP6P7, self).__init__()
+        self.p6 = nn.Conv2d(in_channels, out_channels, 3, 2, 1)
+        self.p7 = nn.Conv2d(out_channels, out_channels, 3, 2, 1)
+        for module in [self.p6, self.p7]:
+            nn.init.kaiming_uniform_(module.weight, a=1)
+            nn.init.constant_(module.bias, 0)
+        self.use_P5 = in_channels == out_channels
+
+    def forward(self, c5, p5):
+        x = p5 if self.use_P5 else c5
+        p6 = self.p6(x)
+        p7 = self.p7(F.relu(p6))
+        return [p6, p7]
