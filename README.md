@@ -1,5 +1,5 @@
 # Contour awareness for few-shot X-ray prohibited item detection with optimal distribution transfer
-https://img.shields.io/badge/any_text-you_like-blue
+![Static Badge](https://img.shields.io/badge/python 3.7)
 ## Data
 FSXPIDDataset：https://pan.quark.cn/s/34061d74103b or https://drive.google.com/file/d/1QsdXUSQH5f8WsKbKHcUr-nRuGF3IHum6/view?usp=sharing
 
