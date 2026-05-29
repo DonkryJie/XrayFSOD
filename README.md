@@ -10,6 +10,5 @@ FSXPIDDataset：https://pan.quark.cn/s/34061d74103b or https://drive.google.com/
 
 mean-cov：https://pan.quark.cn/s/7e47d16176be
 
-## Train
+## Training and Testing
 bash tools/fewshot_exp/train_voc_all.sh
-
